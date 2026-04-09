@@ -90,34 +90,40 @@ public class CefDownloadMixin {
             MCEFSettings settings = MCEF.getSettings();
             MCEFDownloader downloader = new MCEFDownloader(settings.getDownloadMirror(), javaCefCommit, MCEFPlatform.getPlatform());
 
-            boolean downloadJcefBuild;
-
-            // We always download the checksum for the java-cef build
-            // We will compare this with mcef-libraries/<platform>.tar.gz.sha256
-            // If the contents of the files differ (or it doesn't exist locally), we know we need to redownload JCEF
-            try {
-                downloadJcefBuild = !downloader.downloadJavaCefChecksum();
-            } catch (IOException e) {
-                MCEF.getLogger().error("Failed to download JCEF checksum.", e);
-                MCEFDownloadListener.INSTANCE.setFailed(true);
-                return;
-            }
-
-            // Ensure the mcef-libraries directory exists
-            // If not, we want to try redownloading
+            boolean downloadJcefBuild = false;
             File mcefLibrariesDir = new File(System.getProperty("mcef.libraries.path"));
-            downloadJcefBuild |= !mcefLibrariesDir.exists();
 
-            if (downloadJcefBuild && !settings.isSkipDownload()) {
+            // 修复：优先判断配置文件中的 skip-download 选项
+            if (settings.isSkipDownload()) {
+                MCEF.getLogger().info("Skipping JCEF download and network checks as 'skip-download' is set to true in config.");
+                // 依然需要检查本地文件是否存在，如果不存在给个警告提示
+                if (!mcefLibrariesDir.exists()) {
+                    MCEF.getLogger().warn("MCEF skip-download is true, but local libraries are missing! This might cause a crash.");
+                }
+            } else {
+                // 未开启跳过下载时，才进行网络请求获取 checksum
                 try {
-                    downloader.downloadJavaCefBuild();
+                    downloadJcefBuild = !downloader.downloadJavaCefChecksum();
                 } catch (IOException e) {
-                    MCEF.getLogger().error("Failed to download JCEF.", e);
+                    MCEF.getLogger().error("Failed to download JCEF checksum.", e);
                     MCEFDownloadListener.INSTANCE.setFailed(true);
                     return;
                 }
 
-                downloader.extractJavaCefBuild(true);
+                downloadJcefBuild |= !mcefLibrariesDir.exists();
+
+                // 如果需要下载，则进行完整的下载与解压流程
+                if (downloadJcefBuild) {
+                    try {
+                        downloader.downloadJavaCefBuild();
+                    } catch (IOException e) {
+                        MCEF.getLogger().error("Failed to download JCEF.", e);
+                        MCEFDownloadListener.INSTANCE.setFailed(true);
+                        return;
+                    }
+
+                    downloader.extractJavaCefBuild(true);
+                }
             }
 
             MCEFDownloadListener.INSTANCE.setDone(true);
