@@ -1,7 +1,9 @@
 <p align="center">
   <img src="https://github.com/CinemaMod/mcef/assets/30220598/938896d7-2589-49df-8f82-29266c64dfb7" alt="MCEF Logo" style="width:66px;height:66px;">
 </p>
+
 # 该分支仅修复了重复联网校验的问题，这在中国大陆网络环境下将会比较友好
+
 # MCEF (Minecraft Chromium Embedded Framework)
 MCEF is a mod and library for adding the Chromium web browser into Minecraft.
 
